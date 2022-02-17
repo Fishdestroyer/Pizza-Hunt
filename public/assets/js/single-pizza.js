@@ -9,23 +9,26 @@ const $newCommentForm = document.querySelector('#new-comment-form');
 
 let pizzaId;
 
-
 function getPizza() {
+  // get id of pizza
   const searchParams = new URLSearchParams(document.location.search.substring(1));
   const pizzaId = searchParams.get('id');
 
+  // get pizzaInfo
   fetch(`/api/pizzas/${pizzaId}`)
     .then(response => {
+      console.log(response);
       if (!response.ok) {
+        console.log('hi');
         throw new Error({ message: 'Something went wrong!' });
       }
-      //console.log(response);
+
       return response.json();
     })
     .then(printPizza)
     .catch(err => {
       console.log(err);
-      alert('Cannot find a pizza with this id! Off you go.');
+      alert('Cannot find a pizza with this id! Taking you back.');
       window.history.back();
     });
 }
@@ -61,12 +64,14 @@ function printComment(comment) {
       <h5 class="text-dark">${comment.writtenBy} commented on ${comment.createdAt}:</h5>
       <p>${comment.commentBody}</p>
       <div class="bg-dark ml-3 p-2 rounded" >
-        ${comment.replies && comment.replies.length
-      ? `<h5>${comment.replies.length} ${comment.replies.length === 1 ? 'Reply' : 'Replies'
-      }</h5>
+        ${
+          comment.replies && comment.replies.length
+            ? `<h5>${comment.replies.length} ${
+                comment.replies.length === 1 ? 'Reply' : 'Replies'
+              }</h5>
         ${comment.replies.map(printReply).join('')}`
-      : '<h5 class="p-1">No replies yet!</h5>'
-    }
+            : '<h5 class="p-1">No replies yet!</h5>'
+        }
       </div>
       <form class="reply-form mt-3" data-commentid='${comment._id}'>
         <div class="mb-3">
@@ -107,8 +112,49 @@ function handleNewCommentSubmit(event) {
 
   const formData = { commentBody, writtenBy };
 
-  fetch(`api/comments/${pizzaID}`, {
+  fetch(`/api/comments/${pizzaId}`, {
     method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(formData)
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+      response.json();
+    })
+    .then(commentResponse => {
+      console.log(commentResponse);
+      // location.reload();
+    })
+    .catch(err => {
+      console.log(err);
+    });
+}
+
+function handleNewReplySubmit(event) {
+  event.preventDefault();
+
+  if (!event.target.matches('.reply-form')) {
+    return false;
+  }
+
+  const commentId = event.target.getAttribute('data-commentid');
+
+  const writtenBy = event.target.querySelector('[name=reply-name]').value;
+  const replyBody = event.target.querySelector('[name=reply]').value;
+
+  if (!replyBody || !writtenBy) {
+    return false;
+  }
+
+  const formData = { writtenBy, replyBody };
+
+  fetch(`/api/comments/${pizzaId}/${commentId}`, {
+    method: 'PUT',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json'
@@ -128,33 +174,13 @@ function handleNewCommentSubmit(event) {
     .catch(err => {
       console.log(err);
     });
-};
-
-
-
-function handleNewReplySubmit(event) {
-  event.preventDefault();
-
-  if (!event.target.matches('.reply-form')) {
-    return false;
-  }
-
-  const commentId = event.target.getAttribute('data-commentid');
-
-  const writtenBy = event.target.querySelector('[name=reply-name]').value;
-  const replyBody = event.target.querySelector('[name=reply]').value;
-
-  if (!replyBody || !writtenBy) {
-    return false;
-  }
-
-  const formData = { writtenBy, replyBody };
 }
 
-$backBtn.addEventListener('click', function () {
+$backBtn.addEventListener('click', function() {
   window.history.back();
 });
 
 $newCommentForm.addEventListener('submit', handleNewCommentSubmit);
 $commentSection.addEventListener('submit', handleNewReplySubmit);
+
 getPizza();
